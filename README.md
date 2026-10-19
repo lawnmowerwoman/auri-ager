@@ -4,7 +4,7 @@
 
 A calm, opinionated Home Assistant energy dashboard suite with a shared visual language.
 
-Current release: 1.2.1  
+Current release: 1.2.2
 Status: Stable  
 License: Apache 2.0
 
@@ -34,6 +34,16 @@ The bundled framework file contains these cards:
 | Container | `custom:auri-ager-container-card` | Visual wrapper for nested Lovelace cards |
 
 ## Installation
+
+### HACS
+
+In HACS, search for **Auri Ager** and download it. HACS registers the dashboard resource automatically when resources are managed through the Home Assistant UI. Reload your browser after installation or an update.
+
+While the default-repository submission is under review, add `https://github.com/lawnmowerwoman/auri-ager` as a custom repository in HACS with type **Dashboard**, then download Auri Ager.
+
+When migrating from a manual installation, remove the old `/local/auri-ager.js` resource to avoid loading the framework twice. If you manage dashboard resources in YAML, register `/hacsfiles/auri-ager/auri-ager.js` as a module yourself.
+
+### Manual Installation
 
 Copy the bundled file to Home Assistant, for example:
 

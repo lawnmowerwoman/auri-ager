@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.2.2 - 2026-10-19
+
+### Fixed
+
+- Escape Load Breakdown entity names, icons and entity IDs before inserting HTML.
+- Expand Markdown sensor values only as text after rendering and restrict links to HTTP(S) or relative URLs.
+- Track Finance sensors from `config.entities` so values update after the first render.
+- Forward every Home Assistant state update to Container child cards.
+
+### Changed
+
+- Document HACS installation, manual migration and YAML-managed resources.
+- Add browser regression tests for the HACS review findings.
+
 ## 1.2.1 - 2026-08-22
 
 ### Changed

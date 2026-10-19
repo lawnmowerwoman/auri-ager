@@ -18,7 +18,7 @@
  * Source modules included below without minification for easier debugging.
  *
  * ----------------------------------------------------------------------------
- * Version: 1.2.1
+ * Version: 1.2.2
  * Status : Stable Release
  *
  * Release history:
@@ -99,6 +99,10 @@
  * - HACS release preparation
  * - Repository metadata and validation workflow cleanup
  * 
+ * 1.2.2
+ * - Addressed HACS security and state update review findings
+ * - Documented HACS installation and added browser regression tests
+ *
  * Planned:
  * - Localization
  *
@@ -784,8 +788,8 @@ class AuriAgerContainerCard extends AuriAgerBaseCard {
     return 4;
   }
 
-  stateSnapshot() {
-    return JSON.stringify(this.config?.cards ?? []);
+  needsLiveUpdates() {
+    return true;
   }
 
 	styles() {
@@ -2830,26 +2834,59 @@ class AuriAgerMarkdownCard extends AuriAgerBaseCard {
     return this.config?.content ?? "";
   }
 
-  inlineMarkdown(text) {
-    return this.escapeHtml(text)
-      .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
-      .replace(/\*(.+?)\*/g, "<em>$1</em>")
-      .replace(/`(.+?)`/g, "<code>$1</code>")
-      .replace(/\[(.+?)\]\((.+?)\)/g,'<a href="$2" target="_blank" rel="noopener">$1</a>');
+  safeLinkUrl(value) {
+    const href = String(value).trim();
+    try {
+      const url = new URL(href, "https://home-assistant.invalid/");
+      return ["http:", "https:"].includes(url.protocol) ? href : null;
+    } catch {
+      return null;
+    }
   }
 
-	expandEntities(text) {
-		return `${text ?? ""}`.replace(
-			/\{\{\s*([a-zA-Z_]+\.[a-zA-Z0-9_]+)\s*\}\}/g,
-			(_, entityId) => {
-				const entity = this._hass?.states?.[entityId];
-				if (!entity) return "—";
-	
-				const unit = entity.attributes?.unit_of_measurement ?? "";
-				return `${entity.state}${unit ? " " + unit : ""}`;
-			}
-		);
-	}
+  inlineMarkdown(text) {
+    const source = String(text);
+    const tokens = /\[([^\]\n]+)\]\(([^)\n]+)\)|`([^`]+)`|\*\*(.+?)\*\*|\*(.+?)\*/g;
+    let html = "";
+    let offset = 0;
+
+    // Parse source tokens once so formatting never rewrites generated attributes.
+    for (const match of source.matchAll(tokens)) {
+      html += this.escapeHtml(source.slice(offset, match.index));
+      const [, label, target, code, strong, emphasis] = match;
+      if (label !== undefined) {
+        const href = this.safeLinkUrl(target);
+        const title = this.inlineMarkdown(label);
+        html += href === null
+          ? title
+          : `<a href="${this.escapeHtml(href)}" target="_blank" rel="noopener">${title}</a>`;
+      } else if (code !== undefined) {
+        html += `<code>${this.escapeHtml(code)}</code>`;
+      } else if (strong !== undefined) {
+        html += `<strong>${this.inlineMarkdown(strong)}</strong>`;
+      } else {
+        html += `<em>${this.escapeHtml(emphasis)}</em>`;
+      }
+      offset = match.index + match[0].length;
+    }
+    return html + this.escapeHtml(source.slice(offset));
+  }
+
+  expandEntities(content) {
+    const walker = document.createTreeWalker(content, NodeFilter.SHOW_TEXT);
+    while (walker.nextNode()) {
+      const node = walker.currentNode;
+      node.textContent = node.textContent.replace(
+        /\{\{\s*([a-zA-Z_]+\.[a-zA-Z0-9_]+)\s*\}\}/g,
+        (_, entityId) => {
+          const entity = this._hass?.states?.[entityId];
+          if (!entity) return "—";
+          const unit = entity.attributes?.unit_of_measurement ?? "";
+          return `${entity.state}${unit ? " " + unit : ""}`;
+        }
+      );
+    }
+  }
 
   renderMarkdown(content) {
     const lines = `${content ?? ""}`.split("\n");
@@ -3104,14 +3141,14 @@ class AuriAgerMarkdownCard extends AuriAgerBaseCard {
 		
 		if (content && card) {
 			const raw = this.config?.content ?? "";
-			const expanded = this.expandEntities(raw);
 			const hasContent = raw.trim().length > 0;
 
 			card.classList.toggle("has-content", hasContent);
 			card.classList.toggle("no-content", !hasContent);
 		
 			content.style.display = hasContent ? "" : "none";
-			content.innerHTML = hasContent ? this.renderMarkdown(expanded) : "";
+			content.innerHTML = hasContent ? this.renderMarkdown(raw) : "";
+      this.expandEntities(content);
 		}
   }
 }
@@ -8087,12 +8124,13 @@ class AuriAgerFinanceCard extends AuriAgerBaseCard {
   }
 
 	trackedEntities() {
+		const entities = this.config?.entities ?? {};
 		return [
-			this.config?.direct_saving,
-			this.config?.battery_saving,
-			this.config?.feed_in_revenue,
-			this.config?.grid_import_cost,
-			this.config?.fictional_total,
+			entities.direct_saving,
+			entities.battery_saving,
+			entities.feed_in_revenue,
+			entities.grid_import_cost,
+			entities.fictional_total,
 		].filter(Boolean);
 	}
 
@@ -8737,9 +8775,9 @@ class AuriAgerLoadBreakdownCard extends AuriAgerBaseCard {
 
 		rows.innerHTML = `
 			${items.map((item) => `
-				<div class="row clickable" data-entity="${item.entity}">
-					<ha-icon icon="${item.icon}"></ha-icon>
-					<div class="name">${item.name}</div>
+				<div class="row clickable" data-entity="${this.escapeHtml(item.entity)}">
+					<ha-icon icon="${this.escapeHtml(item.icon)}"></ha-icon>
+					<div class="name">${this.escapeHtml(item.name)}</div>
 					<div class="value">${this.fmtW(item.value)}</div>
 				</div>
 			`).join("")}
