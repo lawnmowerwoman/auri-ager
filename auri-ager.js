@@ -18,7 +18,7 @@
  * Source modules included below without minification for easier debugging.
  *
  * ----------------------------------------------------------------------------
- * Version: 1.2.2
+ * Version: 1.2.3
  * Status : Stable Release
  *
  * Release history:
@@ -102,6 +102,10 @@
  * 1.2.2
  * - Addressed HACS security and state update review findings
  * - Documented HACS installation and added browser regression tests
+ *
+ * 1.2.3
+ * - Escaped Entities captions and safely assigned Sun titles and background URLs
+ * - Added configuration injection regression tests
  *
  * Planned:
  * - Localization
@@ -1233,7 +1237,7 @@ class AuriAgerEntitiesCard extends AuriAgerBaseCard {
 										
 												const label = captions[sourceIndex]?.label ?? "";
 										
-												return `<div class="caption-value">${label}</div>`;
+												return `<div class="caption-value">${this.escapeHtml(label)}</div>`;
 											})
 											.join("")}
                   </div>
@@ -4600,14 +4604,14 @@ class AuriAgerSunCard extends HTMLElement {
 
       <ha-card>
         <svg viewBox="0 0 ${width} ${height}">
-          ${showTitle ? `<text x="${this.constructor.LAYOUT.titleX}" y="${this.constructor.LAYOUT.titleY}" class="title">${title ?? "Sonnenstand"}</text>` : ""}
+          ${showTitle ? `<text x="${this.constructor.LAYOUT.titleX}" y="${this.constructor.LAYOUT.titleY}" class="title"></text>` : ""}
 
           <clipPath id="sun-bg-clip">
             <circle cx="${cx}" cy="${cy}" r="${r}"/>
           </clipPath>
 
           ${background
-            ? `<image href="${background}"
+            ? `<image id="sun-background"
                       x="${cx - r}"
                       y="${cy - r}"
                       width="${r * 2}"
@@ -4660,6 +4664,13 @@ class AuriAgerSunCard extends HTMLElement {
         </svg>
       </ha-card>
     `;
+
+    if (showTitle) {
+      this.shadowRoot.querySelector(".title").textContent = title ?? "Sonnenstand";
+    }
+    if (background) {
+      this.shadowRoot.querySelector("#sun-background").setAttribute("href", background);
+    }
   }
 
   updateDynamicDom() {

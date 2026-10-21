@@ -1,13 +1,11 @@
-# Auri Ager Framework v1.2.2
+# Auri Ager Framework v1.2.3
 
-This patch addresses all four findings from the HACS submission review.
+This patch addresses the three remaining configuration escaping findings from the HACS review.
 
-- Load Breakdown renders entity names, icons and entity IDs as escaped text.
-- Markdown expands entity values into text nodes after rendering. Links allow only HTTP(S) or relative URLs.
-- Finance updates when sensors configured under `entities` change.
-- Container forwards new Home Assistant state to its nested cards.
-- README now explains HACS installation and migration from manual resources.
+- Entities caption labels are escaped before being inserted into HTML.
+- Sun titles are assigned with `textContent`, preserving their literal text.
+- Sun background URLs are assigned with `setAttribute`, preventing quotes from injecting SVG event handlers.
 
-Validation: five browser regression tests fail against v1.2.1 and pass against this release. The JavaScript bundle also passes the Node.js syntax check.
+Three new browser regression tests reproduce the findings against v1.2.2 and pass against this release. All eight HACS regression tests and the JavaScript syntax check pass.
 
-This patch retains the other card implementations from v1.2.1. Later local Flow, Summary and Entity Grid features are reserved for a separate release.
+Default and hidden titles, normal image URLs, image clipping and existing layouts are preserved. This release retains the earlier v1.2.2 fixes.

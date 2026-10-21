@@ -1,6 +1,6 @@
 # HACS Review Regression Tests
 
-The tests run the real card classes in a headless browser and cover HTML injection, Markdown link schemes, sensor substitution, Finance refreshes and Container state propagation.
+The tests run the real card classes in a headless browser and cover HTML injection, Markdown link schemes, sensor substitution, Finance refreshes, Container state propagation, Entities captions and Sun title/background injection.
 
 With Node.js and Playwright installed:
 

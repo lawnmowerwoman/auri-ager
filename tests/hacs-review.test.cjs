@@ -5,7 +5,7 @@ const { test, before, after } = require("node:test");
 const { chromium } = require(process.env.PLAYWRIGHT_MODULE || "playwright");
 
 const root = resolve(__dirname, "..");
-const fragments = ["base", "markdown", "finance", "container", "load_breakdown"];
+const fragments = ["base", "markdown", "finance", "container", "load_breakdown", "entities", "solar_geometry", "sun"];
 const bundle = process.env.AURI_BUNDLE || (!existsSync(resolve(root, "Fragments")) && resolve(root, "auri-ager.js"));
 const source = bundle
   ? readFileSync(resolve(bundle), "utf8")
@@ -166,5 +166,73 @@ test("Container forwards current hass through async creation and subsequent upda
     assert.equal(result.initial, "2");
     assert.equal(result.updated, "3");
     assert.equal(result.sameHass, true);
+  });
+});
+
+test("Entities captions render shared configuration as literal text", async () => {
+  await withPage(async (page) => {
+    const result = await page.evaluate(() => {
+      const card = document.createElement("auri-ager-entities-card");
+      const label = '<img src=x onerror="window.injected=true"> & <svg onload="evil">';
+      card.setConfig({ caption: [{ label }], entities: [] });
+      card.hass = { states: {} };
+      const caption = card.shadowRoot.querySelector(".caption-value");
+      return { text: caption.textContent, label, children: caption.children.length };
+    });
+    assert.equal(result.text, result.label);
+    assert.equal(result.children, 0);
+  });
+});
+
+test("Sun title cannot inject SVG markup and preserves literal characters", async () => {
+  await withPage(async (page) => {
+    const result = await page.evaluate(() => {
+      const card = document.createElement("auri-ager-sun-card");
+      const title = '</text><image href="x" onerror="window.injected=true"/><text>Sun & Sky';
+      card.setConfig({ title });
+      card.buildStaticDom();
+      const text = card.shadowRoot.querySelector(".title").textContent;
+      const images = card.shadowRoot.querySelectorAll("image").length;
+      const handlers = card.shadowRoot.querySelectorAll("[onerror]").length;
+      card.setConfig({});
+      card.buildStaticDom();
+      const defaultTitle = card.shadowRoot.querySelector(".title").textContent;
+      card.setConfig({ title: false });
+      card.buildStaticDom();
+      return { text, title, images, handlers, defaultTitle, hidden: !card.shadowRoot.querySelector(".title") };
+    });
+    assert.equal(result.text, result.title);
+    assert.equal(result.images, 0);
+    assert.equal(result.handlers, 0);
+    assert.equal(result.defaultTitle, "Sonnenstand");
+    assert.equal(result.hidden, true);
+  });
+});
+
+test("Sun background URLs cannot break out of their SVG attribute", async () => {
+  await withPage(async (page) => {
+    const result = await page.evaluate(() => {
+      const card = document.createElement("auri-ager-sun-card");
+      const background = '/local/sun.jpg?x=1&y=2" onerror="window.injected=true';
+      card.setConfig({ title: false, background });
+      card.buildStaticDom();
+      const image = card.shadowRoot.querySelector("image");
+      const href = image.getAttribute("href");
+      const handler = image.hasAttribute("onerror");
+      const count = card.shadowRoot.querySelectorAll("image").length;
+      const clip = image.getAttribute("clip-path");
+      card.setConfig({ title: false, background: "/local/roof.jpg?x=1&y=2" });
+      card.buildStaticDom();
+      const normalHref = card.shadowRoot.querySelector("image").getAttribute("href");
+      card.setConfig({ title: false });
+      card.buildStaticDom();
+      return { href, background, handler, count, clip, normalHref, absent: !card.shadowRoot.querySelector("image") };
+    });
+    assert.equal(result.href, result.background);
+    assert.equal(result.handler, false);
+    assert.equal(result.count, 1);
+    assert.equal(result.clip, "url(#sun-bg-clip)");
+    assert.equal(result.normalHref, "/local/roof.jpg?x=1&y=2");
+    assert.equal(result.absent, true);
   });
 });

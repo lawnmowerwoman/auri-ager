@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.2.3 - 2026-10-21
+
+### Fixed
+
+- Escape Entities caption labels before inserting HTML.
+- Assign Sun titles with `textContent` and background image URLs with `setAttribute` so configuration strings cannot inject SVG elements or event handlers.
+
+### Tests
+
+- Add three browser regression tests covering caption markup, Sun title markup and background attribute injection, including default titles, hidden titles and normal image URLs.
+- All eight HACS regression tests pass.
+
 ## 1.2.2 - 2026-10-19
 
 ### Fixed
